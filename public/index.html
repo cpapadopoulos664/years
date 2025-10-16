@@ -1,0 +1,37 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Years Grid</title>
+  <link rel="stylesheet" href="/styles.css" />
+</head>
+<body>
+  <header class="header">
+    <h1>Years Grid</h1>
+    <div class="stats">
+      <span id="filledCount">0</span>/<span id="totalCount">0</span> filled
+      <span class="dot green"></span>3285
+      <span class="dot blue"></span>14600
+      <span class="dot red"></span>remaining
+    </div>
+  </header>
+  <main>
+    <div id="grid" class="grid" aria-label="Grid of boxes"></div>
+  </main>
+  <script src="/app.js" defer></script>
+  <noscript>This app requires JavaScript.</noscript>
+</body>
+<style>
+  /* Inline small critical bit to avoid flash; rest in styles.css */
+  body { margin: 0; font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif; }
+  .header { position: sticky; top: 0; background: #fff; padding: 12px 16px; border-bottom: 1px solid #eee; display: flex; align-items: center; gap: 16px; z-index: 1; }
+  .stats { color: #333; display: flex; align-items: center; gap: 12px; }
+  .dot { display: inline-block; width: 12px; height: 12px; border-radius: 2px; margin-left: 8px; }
+  .dot.green { background: #2ecc71; }
+  .dot.blue  { background: #3498db; }
+  .dot.red   { background: #e74c3c; }
+</style>
+</html>
+
+

@@ -17,26 +17,7 @@ const GREEN_COUNT = 3285;
 const BLUE_COUNT = 14600;
 const RED_COUNT = TOTAL_BOXES - GREEN_COUNT - BLUE_COUNT; // remaining
 
-// Persistence for daily progress
-const dataDir = path.join(__dirname);
-const dataPath = path.join(dataDir, 'data.json');
-
-function readState() {
-  if (!fs.existsSync(dataPath)) {
-    return { filledCount: 0, lastFillDate: null };
-  }
-  try {
-    const content = fs.readFileSync(dataPath, 'utf8');
-    return JSON.parse(content);
-  } catch (_e) {
-    return { filledCount: 0, lastFillDate: null };
-  }
-}
-
-function writeState(state) {
-  fs.writeFileSync(dataPath, JSON.stringify(state, null, 2));
-}
-
+// Date utilities (UTC-based)
 function todayKey(date = new Date()) {
   // Use UTC date so day boundaries are consistent regardless of server TZ
   const y = date.getUTCFullYear();
@@ -45,20 +26,25 @@ function todayKey(date = new Date()) {
   return `${y}-${m}-${d}`;
 }
 
-function advanceOnePerDay() {
-  const state = readState();
-  const currentDay = todayKey();
+// Fixed start date: count days passed since 2025-10-16 (exclusive)
+// i.e., 2025-10-16 => 0, 2025-10-17 => 1, etc.
+const START_DATE_UTC = new Date(Date.UTC(2025, 9, 16)); // months are 0-based
 
-  if (state.filledCount >= TOTAL_BOXES) {
-    return state;
-  }
+function utcMidnight(date) {
+  return Date.UTC(
+    date.getUTCFullYear(),
+    date.getUTCMonth(),
+    date.getUTCDate(),
+    0, 0, 0, 0
+  );
+}
 
-  if (state.lastFillDate !== currentDay) {
-    state.filledCount = Math.min(TOTAL_BOXES, (state.filledCount || 0) + 1);
-    state.lastFillDate = currentDay;
-    writeState(state);
-  }
-  return state;
+function computeFilledFromStart(today = new Date()) {
+  const diffMs = utcMidnight(today) - START_DATE_UTC;
+  if (diffMs < 0) return 0; // before start date
+  const daysElapsed = Math.floor(diffMs / 86400000);
+  const inclusiveCount = daysElapsed + 1; // count start day as day 1
+  return Math.min(TOTAL_BOXES, inclusiveCount);
 }
 
 // Health and config endpoint
@@ -72,12 +58,12 @@ app.get('/api/config', (_req, res) => {
   });
 });
 
-// Daily fill progress endpoint
+// Daily fill progress endpoint (derived from fixed start date)
 app.get('/api/progress', (_req, res) => {
-  const state = advanceOnePerDay();
+  const filledCount = computeFilledFromStart();
   res.json({
-    filledCount: state.filledCount,
-    lastFillDate: state.lastFillDate,
+    filledCount,
+    sinceDate: todayKey(START_DATE_UTC),
   });
 });
 
@@ -87,13 +73,6 @@ app.get(/^\/(?!api).*/, (_req, res) => {
 });
 
 app.listen(PORT, () => {
-  // Ensure state file exists on startup
-  const state = readState();
-  if (state.filledCount > TOTAL_BOXES) {
-    writeState({ filledCount: TOTAL_BOXES, lastFillDate: state.lastFillDate });
-  } else if (!fs.existsSync(dataPath)) {
-    writeState({ filledCount: state.filledCount || 0, lastFillDate: state.lastFillDate });
-  }
   console.log(`Server running on http://localhost:${PORT}`);
 });
 
